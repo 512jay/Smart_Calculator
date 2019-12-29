@@ -1,0 +1,116 @@
+type: edu
+custom_name: stage5
+files:
+- name: test/Test.java
+  visible: false
+  text: |
+    import calculator.MainKt;
+    import org.hyperskill.hstest.v6.stage.BaseStageTest;
+    import org.hyperskill.hstest.v6.testcase.PredefinedIOTestCase;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Test extends BaseStageTest {
+
+        public Test() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<PredefinedIOTestCase> generate() {
+            return Arrays.asList(
+                new PredefinedIOTestCase(
+                    "100 + 200 - 300\n/exit",
+                    "0\nBye!"
+                ),
+                new PredefinedIOTestCase(
+                    "4 + 6 - 8\n\n\n2 - 3 - 4\n\n8 + 7 - 4\n/exit",
+                    "2\n-5\n11\nBye!"
+                ),
+                new PredefinedIOTestCase(
+                    "abc\n123+\n+15\n18 22\n\n-22\n22-\n/exit",
+                    "Invalid expression\n" +
+                        "Invalid expression\n" +
+                        "15\n" +
+                        "Invalid expression\n" +
+                        "-22\n" +
+                        "Invalid expression\n" +
+                        "Bye!"
+                ),
+                new PredefinedIOTestCase(
+                    "/go\n/exit",
+                    "Unknown command\nBye!"
+                )
+            );
+        }
+    }
+  learner_created: false
+- name: src/calculator/Main.kt
+  visible: true
+  text: |
+    package calculator
+
+    import java.util.Scanner
+
+    fun main() {
+        val scanner = Scanner(System.`in`)
+
+        loop@ while (true) {
+            val entry = scanner.nextLine().replace(Regex("\\s+")," ")
+            val input: List<String> = entry.split(" ")
+
+            when (input[0]) {
+                "" -> continue@loop
+                "/exit" -> {println("Bye!"); return}
+                "/help" -> {println("The program calculates the sum of numbers"); continue@loop}
+            }
+
+
+            var result = input[0].toDouble()
+            if (input.size != 1)
+                for (element in 1 until input.size step 2) {
+                    if (operation(input[element]) == '+') {
+                        result += input[element + 1].toDouble()
+                    } else if (operation(input[element]) == '-') {
+                        result -= input[element + 1].toDouble()
+                    }
+                }
+            println(result.toInt())
+        }
+    }
+
+
+
+    fun operation(operand: String) : Char {
+        when (operand[0]) {
+            '+' -> return '+'
+            '-' -> {
+                return if (operand.length % 2 == 0){
+                    '+'
+                }else {
+                    '-'
+                }
+            }
+        }
+        return ' '
+    }
+  learner_created: false
+- name: src/calculator/tester.kt
+  visible: true
+  text: |-
+    package calculator
+
+    import java.util.Scanner
+
+    fun main() {
+        val scanner = Scanner(System.`in`)
+        var entry = scanner.nextLine()
+        println(entry)
+        entry = entry.replace(Regex("\\s+")," ")
+        println(entry)
+    }
+  learner_created: false
+feedback_link: https://hyperskill.org/projects/88/stages/490/implement
+status: Solved
+record: 4

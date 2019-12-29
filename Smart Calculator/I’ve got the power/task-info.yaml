@@ -1,0 +1,246 @@
+type: edu
+custom_name: stage7
+files:
+- name: test/Test.java
+  visible: false
+  text: |
+    import calculator.MainKt;
+    import org.hyperskill.hstest.v6.stage.BaseStageTest;
+    import org.hyperskill.hstest.v6.testcase.PredefinedIOTestCase;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Test extends BaseStageTest {
+
+        public Test() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<PredefinedIOTestCase> generate() {
+            return Arrays.asList(
+                /* Check simple additions and subtractions */
+                new PredefinedIOTestCase(
+                    "4 + 6 - 8\n\n\n2 - 3 - 4\n\n8 + 7 - 4\n1 +++ 2 * 3 -- 4\n/exit",
+                    "2\n-5\n11\n11\nBye!"
+                ),
+                /* Check handling unknown commands */
+                new PredefinedIOTestCase(
+                    "/command\n/exit",
+                    "Unknown command\nBye!"
+                ),
+                /* Check all operations */
+                new PredefinedIOTestCase(
+                    "3 + 8 * ((4 + 3) * 2 + 1) - 6 / (2 + 1)\n/exit",
+                    "121\nBye!"
+                ),
+                /* Check with an invalid expressions */
+                new PredefinedIOTestCase(
+                    "8 * 3 + 12 * (4 - 2)\n4 * (2 + 3\n4 + 3)\n/exit",
+                    "48\nInvalid expression\nInvalid expression\nBye!"
+                ),
+                /* Check expressions with variables */
+                new PredefinedIOTestCase(
+                    "a = 4\nb = 5\nc = 6\na*2+b*3+c*(2+3)\n/exit",
+                    "53\nBye!"
+                ),
+                /* Check reassignment */
+                new PredefinedIOTestCase(
+                    "a = 1\na = 2\na = 3\na\n/exit",
+                    "3\nBye!"
+                )
+            );
+        }
+    }
+  learner_created: false
+- name: src/calculator/Main.kt
+  visible: true
+  text: |
+    package calculator
+
+    import java.util.Scanner
+
+    fun main() {
+        val scanner = Scanner(System.`in`)
+        val variables = mutableMapOf<String, Int>()
+
+        loop@ while (true) {
+            var command: Boolean
+            var variable: Boolean
+            // var number = false
+
+            val entry = scanner.nextLine().replace(Regex("="), " = ")
+            val input: List<String> = entry.split(Regex("\\s+"))
+            if(input[0] == "") continue@loop
+
+            command = isCommand(entry)
+            if (command) {
+                when(input[0]) {
+                    "/exit" -> {println("Bye!"); return}
+                    "/help" -> {println("The program calculates the sum of numbers"); continue@loop}
+                    else -> {println("Unknown command"); continue@loop}
+                }
+            }
+
+            variable = isVariable(input[0])
+            if (variable) {
+                if (input.size == 1) {
+                    // check if value exists and print if it does give error if it does not.
+                    if (variables.containsKey(input[0])) {
+                        println(variables[input[0]])
+                        continue@loop
+                    } else {
+                        println("Unknown variable")
+                        continue@loop
+                    }
+                }
+                if (input[1] == "=") {
+                    if (invalidAssignment(input)) {
+                        println("Invalid assignment")
+                        continue@loop
+                    }
+                    if (!allLetters(input[0])) {
+                        println("Invalid identifier")
+                        continue@loop
+                    }
+                    if (allNumbers(input[2])) {
+                        val tempInt: Int = input[2].toInt()
+                        variables[input[0]] = tempInt
+                        continue@loop
+                    }else if (variables.containsKey(input[2])) {
+                        val tempInt = variables.getValue(input[2])
+                        variables[input[0]] = tempInt
+                        continue@loop
+                    }else if (!variables.containsKey(input[2])) {
+                        println("Unknown variable")
+                        continue@loop
+                    }
+                }
+            }
+
+            var result: Double
+            result = if (allNumbers(input[0]))
+                input[0].toDouble()
+            else
+                variables.getValue(input[0]).toDouble()
+
+            if (input.size != 1) {
+                for (element in 1 until input.size step 2) {
+                    if (operation(input[element]) == '+') {
+                        // Possible leak
+                        result += if (variables.containsKey(input[element + 1])) {
+                            variables.getValue(input[element + 1]).toDouble()
+                        } else
+                            input[element + 1].toDouble()
+                    } else if (operation(input[element]) == '-') {
+                        result -= if (variables.containsKey(input[element + 1])) {
+                            variables.getValue(input[element + 1]).toDouble()
+                        } else
+                            input[element + 1].toDouble()
+                    } else if (!isNotValid(input[element])) {
+                        println("Invalid expression")
+                        continue@loop
+                    }
+                }
+            }
+            println(result.toInt())
+        }
+    }
+
+    fun invalidAssignment(l: List<String>): Boolean {
+        if (l.size > 3) return true
+        if(!isVariable(l[0])) return true
+        if(!l[1].contains('=')) return true
+        if(isVariable(l[2])) {
+            return !allLetters(l[2])
+        }
+        if(allNumbers(l[2])) return false
+        return false
+    }
+
+    fun isVariable(str: String): Boolean {
+        if(str.first().isLetter()) {
+            for (c in str) {
+                if(!c.isLetterOrDigit())
+                    return false
+            }
+            return true
+        } else
+            return false
+    }
+
+    fun isCommand(str: String): Boolean {
+        if (str.first() == '/') return true
+        return false
+    }
+
+    fun allLetters(str: String): Boolean {
+        for (c in str) {
+            if (!c.isLetter()) {
+                return false
+            }
+        }
+        return true
+    }
+
+    fun allNumbers(str: String): Boolean {
+        for (c in str) {
+            if (!c.isDigit()){
+                return false
+            }
+        }
+        return true
+    }
+
+    fun isNotValid(str: String): Boolean {
+        if (str.last() == '+' || str.last() == '-'){
+            return true
+        }
+        for (char in str) {
+            if(!checkChar(char)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun checkChar(c: Char): Boolean {
+        if (c.isDigit() || c == '+' || c == '-' || c == ' ')
+            return true
+        return false
+    }
+
+    fun operation(operand: String) : Char {
+        when (operand[0]) {
+            '=' -> return '='
+            '+' -> return '+'
+            '-' -> {
+                return if (operand.length % 2 == 0){
+                    '+'
+                }else {
+                    '-'
+                }
+            }
+        }
+        return ' '
+    }
+  learner_created: false
+- name: src/calculator/tester.kt
+  visible: true
+  text: |-
+    package calculator
+
+    import java.util.Scanner
+
+    fun main() {
+        val scanner = Scanner(System.`in`)
+        var entry = scanner.nextLine()
+        println(entry)
+        entry = entry.replace(Regex("\\s+")," ")
+        println(entry)
+    }
+  learner_created: false
+feedback_link: https://hyperskill.org/projects/88/stages/492/implement
+status: Solved
+record: 7
